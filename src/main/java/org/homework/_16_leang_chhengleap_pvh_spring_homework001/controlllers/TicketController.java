@@ -7,7 +7,6 @@ import org.homework._16_leang_chhengleap_pvh_spring_homework001.models.response.
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -19,18 +18,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TicketController {
     private List<Ticket> tickets = new ArrayList<>();
     private int count =5;
-    AtomicInteger atomicInteger = new AtomicInteger(6);
+    AtomicInteger atomicInteger = new AtomicInteger(11);
 
     public TicketController(){
-        tickets.add(new Ticket(1,"Jisoo", "21-01-25", "SR", "BTB", 15, false, "BOOKED", 1));
-        tickets.add(new Ticket(2,"Jennie", "11-02-25", "PVH", "KP", 20, false, "BOOKED", 1));
-        tickets.add(new Ticket(3,"Lisa", "15-02-25", "KP", "SR", 8, true, "BOOKED", 1));
-        tickets.add(new Ticket(4,"Rosé", "02-03-25", "BMC", "KPC", 12, true, "BOOKED", 1));
-        tickets.add(new Ticket(5,"Iren", "11-03-25", "BMC", "KPT", 15, true, "BOOKED", 1));
-
+        tickets.add(new Ticket(1,"Jisoo", "21-01-25", "SR", "BTB", 15, false, "BOOKED", 5));
+        tickets.add(new Ticket(2,"Jennie", "11-02-25", "PVH", "KP", 20, false,"BOOKED" , 9));
+        tickets.add(new Ticket(3,"Lisa", "15-02-25", "KP", "SR", 8, true, "BOOKED", 2));
+        tickets.add(new Ticket(4,"Rosé", "02-03-25", "BMC", "KPC", 12, true, "BOOKED", 6));
+        tickets.add(new Ticket(5,"Iren", "11-03-25", "BMC", "KPT", 15, true, "BOOKED", 7));
+        tickets.add(new Ticket(6,"Seugi", "21-01-25", "SR", "BTB", 15, false,"BOOKED" , 10));
+        tickets.add(new Ticket(7,"Jiwon", "11-02-25", "PVH", "KP", 20, false, "BOOKED", 8));
+        tickets.add(new Ticket(8,"Ruonan", "15-02-25", "KP", "SR", 8, true, "BOOKED", 3));
+        tickets.add(new Ticket(9,"Alice", "02-03-25", "BMC", "KPC", 12, true, "BOOKED", 4));
+        tickets.add(new Ticket(10,"Yuqi", "11-03-25", "BMC", "KPT", 15, true,"BOOKED" , 1));
     }
 
-    //[i]. Create a Ticket
+
     @PostMapping
     @Operation(summary = "Create a new ticket")
     public List<Ticket> CreateTicket(@RequestBody TicketRequest ticketRequest){
@@ -38,26 +41,30 @@ public class TicketController {
         return tickets;
     }
 
-    //[ii]. Retrieve All Tickets with pagination
     @GetMapping
     @Operation(summary = "Get all tickets")
-    public List<Ticket> getTickets(@RequestParam(defaultValue = "0") int page,
+    public ResponseEntity<ApiResponse<List<Ticket>>> getTickets(@RequestParam(defaultValue = "1") int page,
                                    @RequestParam(defaultValue = "3") int size) {
-        int start = page * size;
+        int currentPage = page - 1;
+        int start = currentPage * size;
         int end = Math.min(start + size, tickets.size());
 
-        if (start >= tickets.size()) {
-            return new ArrayList<>();
-        }
+        List<Ticket> paginateTickets = tickets.subList(start, end);
 
-        return tickets.subList(start, end);
+        ApiResponse<List<Ticket>> response = new ApiResponse<>();
+        response.setSuccess(true);
+        response.setMessage("All tickets retrieved successfully");
+        response.setStatus(HttpStatus.OK);
+        response.setPayload(paginateTickets);
+        response.setTimestamp(LocalDateTime.now());
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
 
-    //[iii]. Retrieve a Ticket by ID (using @PathVariable)
+
     @GetMapping("/{id}")
     @Operation(summary = "Get a ticket by ID")
-    public ResponseEntity<ApiResponse<List<Ticket>>> getTicket(@PathVariable("id") int id) {
+    public ResponseEntity<ApiResponse<List<Ticket>>> retrieveTicket(@PathVariable("id") int id) {
         List<Ticket> ticketList = new ArrayList<>();
 
         for (Ticket t : tickets) {
@@ -88,10 +95,6 @@ public class TicketController {
     }
 
 
-
-
-
-    //[iv]. Search for a Ticket by Passenger Name (using @RequestParam)
     @GetMapping("/search")
     @Operation(summary = "Search tickets by passenger name")
     public List<Ticket> searchByName( @RequestParam String name){
@@ -104,42 +107,77 @@ public class TicketController {
         return ticketList;
     }
 
-    //[v]. Filter Tickets by Ticket Status and Travel Date (using @RequestParam)
+
     @GetMapping("/filter")
     @Operation(summary = "Filter tickets by status and travel date")
-    public List<Ticket> filter(@RequestParam String date, @RequestParam TicketStatus status) {
+    public ResponseEntity<ApiResponse<List<Ticket>>> filter(@RequestParam String date, @RequestParam TicketStatus status) {
         List<Ticket> ticketList = new ArrayList<>();
+
         for (Ticket t : tickets) {
-            if (t.getTicketStatus().equals(status) && t.getTravelDate().equals(date)) {
+            if (t.getTicketStatus().equalsIgnoreCase(String.valueOf(status)) && t.getTravelDate().equalsIgnoreCase(date)) {
                 ticketList.add(t);
             }
         }
 
-        return ticketList;
+        ApiResponse<List<Ticket>> response = new ApiResponse<>();
+        response.setTimestamp(LocalDateTime.now());
+
+        if (ticketList.isEmpty()) {
+            response.setSuccess(false);
+            response.setMessage("No tickets found with the given status and date");
+            response.setStatus(HttpStatus.NOT_FOUND);
+            response.setPayload(null);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        response.setSuccess(true);
+        response.setMessage("Tickets filtered successfully");
+        response.setStatus(HttpStatus.OK);
+        response.setPayload(ticketList);
+        return ResponseEntity.ok(response);
     }
 
 
-    //[vi]. Update a Ticket by ID
-    @PutMapping ("/{ticket-id}")
+    @PutMapping("/{ticket-id}")
     @Operation(summary = "Update an existing ticket by ID")
-    public Ticket updateTicket(@PathVariable int id, @RequestBody TicketRequest ticketRequest){
-        for(Ticket t: tickets){
-            if(t.getTicketId() == id){
-                t.setPassengerName(ticketRequest.getPassengerName());
-                t.setPrice(ticketRequest.getPrice());
-                t.setDestinationStation(ticketRequest.getDestinationStation());
-                t.setSourceStation(ticketRequest.getSourceStation());
-                t.setSeatNumber(ticketRequest.getSeatNumber());
-                t.setTravelDate(ticketRequest.getTravelDate());
-                t.setPaymentStatus(ticketRequest.getPaymentStatus());
-                return t;
+    public ResponseEntity<ApiResponse<Ticket>> updateTicket(@PathVariable("ticket-id") int id,
+                                                            @RequestBody TicketRequest ticketRequest) {
+        ApiResponse<Ticket> response = new ApiResponse<>();
+        response.setTimestamp(LocalDateTime.now());
 
+        if (tickets.isEmpty()) {
+            response.setSuccess(false);
+            response.setMessage("No tickets found");
+            response.setStatus(HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        for (Ticket t : tickets) {
+            if (t.getTicketId() == id) {
+                t.setPassengerName(ticketRequest.getPassengerName());
+                t.setTravelDate(ticketRequest.getTravelDate());
+                t.setSourceStation(ticketRequest.getSourceStation());
+                t.setDestinationStation(ticketRequest.getDestinationStation());
+                t.setPrice(ticketRequest.getPrice());
+                t.setPaymentStatus(ticketRequest.getPaymentStatus());
+                t.setTicketStatus(ticketRequest.getTicketStatus());
+                t.setSeatNumber(ticketRequest.getSeatNumber());
+
+                response.setSuccess(true);
+                response.setMessage("Ticket updated successfully");
+                response.setStatus(HttpStatus.OK);
+                response.setPayload(t);
+
+                return ResponseEntity.ok(response);
             }
         }
-        return null;
+
+        response.setSuccess(false);
+        response.setMessage("Ticket not found with ID: " + id);
+        response.setStatus(HttpStatus.NOT_FOUND);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
-    //[vii]. Delete a Ticket by ID
     @DeleteMapping("/{ticket-id}")
     @Operation(summary = "Delete a ticket by ID")
     public List<Ticket> deleteEmployee(@RequestParam int id) {
@@ -153,28 +191,48 @@ public class TicketController {
     }
 
 
-    //{Bonus}
-    //[i]. Create Ticket as ArrayList (Done)
-    //[ii]. Bulk update payment status for multiple tickets
+
     @PutMapping
     @Operation(summary = "Bulk update payment status for multiple tickets")
-    public List<Ticket> updateMultiTicket(@PathVariable int id) {
+    public ResponseEntity<ApiResponse<List<Ticket>>> bulkTicket(@RequestParam List<Integer> ids,
+                                                                @RequestBody TicketRequest ticketRequest) {
         List<Ticket> updatedTickets = new ArrayList<>();
+        ApiResponse<List<Ticket>> response = new ApiResponse<>();
+        response.setTimestamp(LocalDateTime.now());
 
         for (Ticket t : tickets) {
-            t.setTicketId(t.getTicketId());
-            if (t.getTicketId() == id) {
-                t.setPaymentStatus(true);
+            if (ids.contains(t.getTicketId())) {
+                t.setPassengerName(ticketRequest.getPassengerName());
+                t.setTravelDate(ticketRequest.getTravelDate());
+                t.setSourceStation(ticketRequest.getSourceStation());
+                t.setDestinationStation(ticketRequest.getDestinationStation());
+                t.setPrice(ticketRequest.getPrice());
+                t.setPaymentStatus(ticketRequest.getPaymentStatus());
+                t.setTicketStatus(ticketRequest.getTicketStatus());
+                t.setSeatNumber(ticketRequest.getSeatNumber());
                 updatedTickets.add(t);
             }
         }
 
         if (updatedTickets.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No matching tickets found");
+            response.setSuccess(false);
+            response.setMessage("No matching tickets found to update.");
+            response.setStatus(HttpStatus.NOT_FOUND);
+            response.setPayload(null);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
 
-        return updatedTickets;
+        response.setSuccess(true);
+        response.setMessage("Payment status updated successfully for selected tickets.");
+        response.setStatus(HttpStatus.OK);
+        response.setPayload(updatedTickets);
+
+        return ResponseEntity.ok(response);
     }
+
+
+
+
 
 
 
