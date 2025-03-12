@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
-@RequestMapping("/api/v1/tickets/")
+@RequestMapping("/api/v1/tickets")
 public class TicketController {
     private List<Ticket> tickets = new ArrayList<>();
     private int count =5;
@@ -276,13 +276,6 @@ public class TicketController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-
-
-
-
-
-
-
 
 
 }
