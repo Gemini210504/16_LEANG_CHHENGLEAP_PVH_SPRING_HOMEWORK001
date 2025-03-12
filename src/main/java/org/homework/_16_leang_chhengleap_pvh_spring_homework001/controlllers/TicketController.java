@@ -62,9 +62,9 @@ public class TicketController {
 
 
 
-    @GetMapping("/{id}")
+    @GetMapping("/{ticket-id}")
     @Operation(summary = "Get a ticket by ID")
-    public ResponseEntity<ApiResponse<List<Ticket>>> retrieveTicket(@PathVariable("id") int id) {
+    public ResponseEntity<ApiResponse<List<Ticket>>> retrieveTicket(@PathVariable("ticket-id") int id) {
         List<Ticket> ticketList = new ArrayList<>();
 
         for (Ticket t : tickets) {
