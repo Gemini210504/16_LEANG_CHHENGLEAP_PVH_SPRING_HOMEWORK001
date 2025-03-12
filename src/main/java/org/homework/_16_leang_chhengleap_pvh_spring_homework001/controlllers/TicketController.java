@@ -36,7 +36,7 @@ public class TicketController {
 
     @PostMapping
     @Operation(summary = "Create a new ticket")
-    public List<Ticket> CreateTicket(@RequestBody TicketRequest ticketRequest){
+    public List<Ticket> createTicket(@RequestBody TicketRequest ticketRequest){
         tickets.add(new Ticket(atomicInteger.getAndIncrement(), ticketRequest.getPassengerName(), ticketRequest.getTravelDate(), ticketRequest.getSourceStation(), ticketRequest.getDestinationStation(), ticketRequest.getPrice(), ticketRequest.getPaymentStatus(), ticketRequest.getTicketStatus(), ticketRequest.getSeatNumber()));
         return tickets;
     }
@@ -97,14 +97,30 @@ public class TicketController {
 
     @GetMapping("/search")
     @Operation(summary = "Search tickets by passenger name")
-    public List<Ticket> searchByName( @RequestParam String name){
+    public ResponseEntity<ApiResponse<List<Ticket>>> searchByName(@RequestParam String name) {
         ArrayList<Ticket> ticketList = new ArrayList<>();
-        for(Ticket t: tickets){
-            if(t.getPassengerName().equalsIgnoreCase(name)){
+        for (Ticket t : tickets) {
+            if (t.getPassengerName().equalsIgnoreCase(name)) {
                 ticketList.add(t);
             }
         }
-        return ticketList;
+
+        ApiResponse<List<Ticket>> response = new ApiResponse<>();
+        response.setTimestamp(LocalDateTime.now());
+
+        if (ticketList.isEmpty()) {
+            response.setSuccess(false);
+            response.setMessage("No tickets found for passenger name: " + name);
+            response.setStatus(HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        response.setSuccess(true);
+        response.setMessage("Tickets found for passenger name: " + name);
+        response.setStatus(HttpStatus.OK);
+        response.setPayload(ticketList);
+
+        return ResponseEntity.ok(response);
     }
 
 
@@ -228,6 +244,37 @@ public class TicketController {
         response.setPayload(updatedTickets);
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/bulk")
+    @Operation(summary = "Bulk create tickets")
+    public ResponseEntity<ApiResponse<List<Ticket>>> bulkTicket(@RequestBody List<TicketRequest> ticketRequests) {
+        ApiResponse<List<Ticket>> response = new ApiResponse<>();
+        List<Ticket> createdTickets = new ArrayList<>();
+
+        for (TicketRequest ticketRequest : ticketRequests) {
+            Ticket newTicket = new Ticket(
+                    atomicInteger.getAndIncrement(),
+                    ticketRequest.getPassengerName(),
+                    ticketRequest.getTravelDate(),
+                    ticketRequest.getSourceStation(),
+                    ticketRequest.getDestinationStation(),
+                    ticketRequest.getPrice(),
+                    ticketRequest.getPaymentStatus(),
+                    ticketRequest.getTicketStatus(),
+                    ticketRequest.getSeatNumber()
+            );
+            tickets.add(newTicket);
+            createdTickets.add(newTicket);
+        }
+
+        response.setTimestamp(LocalDateTime.now());
+        response.setSuccess(true);
+        response.setMessage("Bulk ticket creation successful.");
+        response.setStatus(HttpStatus.CREATED);
+        response.setPayload(createdTickets);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
 
